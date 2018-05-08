@@ -13,30 +13,40 @@ import (
 	"math/big"
 	"net"
 	"os"
+	"sync"
 	"time"
 )
 
 type rootCA struct {
 	cert     *x509.Certificate
 	key      *ecdsa.PrivateKey
-	children map[string]*tls.Certificate
+	tlsCerts map[string]*tls.Certificate
+	sync.RWMutex
 }
 
-func (ca rootCA) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	if tlsCert, ok := ca.children[hello.ServerName]; ok {
+func (ca *rootCA) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	ca.RLock()
+	tlsCert, found := ca.tlsCerts[hello.ServerName]
+	ca.RUnlock()
+
+	if found {
 		return tlsCert, nil
 	}
+
 	cert, priv := ca.Cert(hello.ServerName)
-	tlsCert := &tls.Certificate{
+	tlsCert = &tls.Certificate{
 		Certificate: [][]byte{cert.Raw},
 		PrivateKey:  priv,
 	}
-	ca.children[hello.ServerName] = tlsCert
+
+	ca.Lock()
+	ca.tlsCerts[hello.ServerName] = tlsCert
+	ca.Unlock()
 
 	return tlsCert, nil
 }
 
-func (ca rootCA) Cert(domain string) (*x509.Certificate, *ecdsa.PrivateKey) {
+func (ca *rootCA) Cert(domain string) (*x509.Certificate, *ecdsa.PrivateKey) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "unable to generate ecdsa key: %v", err)
@@ -72,7 +82,7 @@ func (ca rootCA) Cert(domain string) (*x509.Certificate, *ecdsa.PrivateKey) {
 	return finalCert, privKey
 }
 
-func LoadOrCreateRootCA(certFile, keyFile string) rootCA {
+func LoadOrCreateRootCA(certFile, keyFile string) *rootCA {
 
 	certExists := false
 	keyExists := false
@@ -96,7 +106,7 @@ func LoadOrCreateRootCA(certFile, keyFile string) rootCA {
 	return createCA(certFile, keyFile)
 }
 
-func loadCA(certFile string, keyFile string) rootCA {
+func loadCA(certFile string, keyFile string) *rootCA {
 
 	certBytes, err := ioutil.ReadFile(certFile)
 	if err != nil {
@@ -134,14 +144,14 @@ func loadCA(certFile string, keyFile string) rootCA {
 		os.Exit(2)
 	}
 
-	return rootCA{
+	return &rootCA{
 		cert:     cert,
-		children: make(map[string]*tls.Certificate, 10),
+		tlsCerts: make(map[string]*tls.Certificate, 10),
 		key:      key,
 	}
 }
 
-func createCA(certFile string, keyFile string) rootCA {
+func createCA(certFile string, keyFile string) *rootCA {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to generate ecdsa key for root cert: %v", err)
@@ -212,9 +222,9 @@ func createCA(certFile string, keyFile string) rootCA {
 		os.Exit(2)
 	}
 
-	return rootCA{
+	return &rootCA{
 		cert:     finalCert,
-		children: make(map[string]*tls.Certificate, 10),
+		tlsCerts: make(map[string]*tls.Certificate, 10),
 		key:      privKey,
 	}
 }
