@@ -14,7 +14,7 @@ tlself then starts a TCP proxy that listens on localhost:443 and, using SNI, dyn
 
 ## Configuration
 
-Both the listening and backend TCP connections are configurable.
+Both the listening and backend TCP connections are configurable via environment variables.
 
 * `LISTEN` - The IP address and port that the proxy should listen on to make TLS connections, default is 127.0.0.1:443
 * `BACKEND` - The IP address and port that the proxy should send incoming unencrypted connections to, default is 127.0.0.1:80
