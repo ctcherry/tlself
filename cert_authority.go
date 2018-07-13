@@ -35,7 +35,7 @@ func (ca *rootCA) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, 
 
 	cert, priv := ca.Cert(hello.ServerName)
 	tlsCert = &tls.Certificate{
-		Certificate: [][]byte{cert.Raw},
+		Certificate: [][]byte{cert.Raw, ca.cert.Raw},
 		PrivateKey:  priv,
 	}
 
