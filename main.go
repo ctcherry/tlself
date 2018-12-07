@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
+	"strings"
 	"sync"
 )
 
@@ -16,11 +17,6 @@ func main() {
 	usr, err := user.Current()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cant figure out current user: %v\n", err)
-		os.Exit(2)
-	}
-
-	if usr.Uid != "0" {
-		fmt.Fprintf(os.Stderr, "tlself needs to be started with sudo\n")
 		os.Exit(2)
 	}
 
@@ -34,6 +30,11 @@ func main() {
 		backendStr = "127.0.0.1:80"
 	}
 
+	if isRoot(usr) && strings.Contains(listenStr, ":443") {
+		fmt.Fprintf(os.Stderr, "tlself needs to be started with sudo if listening on :443\n")
+		os.Exit(2)
+	}
+
 	workdir := path.Join(usr.HomeDir, ".tlself")
 	err = os.MkdirAll(workdir, 0755)
 	if err != nil {
@@ -45,7 +46,10 @@ func main() {
 	keyFile := path.Join(workdir, "key.pem")
 	root := LoadOrCreateRootCA(certFile, keyFile)
 
-	ensureSystemTrusted(certFile)
+	if err := ensureSystemTrusted(usr, certFile); err != nil {
+		fmt.Fprintf(os.Stderr, "unable to add cert file to trusted certificates: %v\n", err)
+		os.Exit(2)
+	}
 
 	tlsConfig := &tls.Config{
 		PreferServerCipherSuites: true,
@@ -78,6 +82,10 @@ func main() {
 		}
 		go p.proxy(conn)
 	}
+}
+
+func isRoot(usr *user.User) bool {
+	return usr.Uid == "0"
 }
 
 type proxy struct {
@@ -142,14 +150,30 @@ func (p proxy) proxy(conn net.Conn) {
 	wg.Wait()
 }
 
-func ensureSystemTrusted(certFile string) bool {
+func ensureSystemTrusted(usr *user.User, certFile string) error {
 	if systemTrusted(certFile) {
-		return true
+		return nil
 	}
 
-	cmd := exec.Command("security", "add-trusted-cert", "-d", "-r", "trustRoot", "-k", "/Library/Keychains/System.keychain", certFile)
-	err := cmd.Run()
-	return err == nil
+	var output []byte
+	var cmd *exec.Cmd
+	var err error
+
+	if isRoot(usr) {
+		cmd = exec.Command("security", "add-trusted-cert", "-d", "-r", "trustRoot", "-k", "/Library/Keychains/System.keychain", certFile)
+	} else {
+		fmt.Fprintln(os.Stderr, "We need sudo to execute `security add-trusted-cert`. Please enter your password below.")
+		cmd = exec.Command("/bin/sh", "-c", fmt.Sprintf("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain %s", certFile))
+	}
+
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", output)
+		return err
+	}
+
+	fmt.Fprintln(os.Stderr, "Certificate added successfully.")
+	return nil
 }
 
 func systemTrusted(certFile string) bool {

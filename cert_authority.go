@@ -165,6 +165,7 @@ func createCA(certFile string, keyFile string) *rootCA {
 		SerialNumber:          randSerial(),
 		Subject:               commonSubject,
 		NotAfter:              time.Now().AddDate(20, 0, 0),
+		NotBefore:             time.Now().AddDate(0, 0, -1),
 		MaxPathLen:            0,
 		MaxPathLenZero:        true,
 		BasicConstraintsValid: true,
