@@ -49,7 +49,7 @@ func (ca *rootCA) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, 
 func (ca *rootCA) Cert(domain string) (*x509.Certificate, *ecdsa.PrivateKey) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "unable to generate ecdsa key: %v", err)
+		fmt.Fprintf(os.Stderr, "unable to generate ecdsa key: %v\n", err)
 		os.Exit(2)
 	}
 	publicKey := &privKey.PublicKey
@@ -61,21 +61,21 @@ func (ca *rootCA) Cert(domain string) (*x509.Certificate, *ecdsa.PrivateKey) {
 		Subject:               commonSubject,
 		NotAfter:              time.Now().AddDate(20, 0, 0),
 		BasicConstraintsValid: true,
-		IsCA:        false,
-		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		DNSNames:    []string{domain},
+		IsCA:                  false,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		DNSNames:              []string{domain},
 	}
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &cert, ca.cert, publicKey, ca.key)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to create certificate: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to create certificate: %v\n", err)
 		os.Exit(2)
 	}
 
 	finalCert, err := x509.ParseCertificate(derBytes)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to parse created certificate: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to parse created certificate: %v\n", err)
 		os.Exit(2)
 	}
 
@@ -110,37 +110,37 @@ func loadCA(certFile string, keyFile string) *rootCA {
 
 	certBytes, err := ioutil.ReadFile(certFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading root cert file: %v", err)
+		fmt.Fprintf(os.Stderr, "Error reading root cert file: %v\n", err)
 		os.Exit(2)
 	}
 
 	certBlock, _ := pem.Decode(certBytes)
 	if certBlock == nil {
-		fmt.Fprintf(os.Stderr, "Error decoding PEM of root cert file: %v", err)
+		fmt.Fprintf(os.Stderr, "Error decoding PEM of root cert file: %v\n", err)
 		os.Exit(2)
 	}
 
 	cert, err := x509.ParseCertificate(certBlock.Bytes)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing root cert file: %v", err)
+		fmt.Fprintf(os.Stderr, "Error parsing root cert file: %v\n", err)
 		os.Exit(2)
 	}
 
 	keyBytes, err := ioutil.ReadFile(keyFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading root private key file: %v", err)
+		fmt.Fprintf(os.Stderr, "Error reading root private key file: %v\n", err)
 		os.Exit(2)
 	}
 
 	keyBlock, _ := pem.Decode(keyBytes)
 	if keyBlock == nil {
-		fmt.Fprintf(os.Stderr, "Error decoding PEM of root private key file: %v", err)
+		fmt.Fprintf(os.Stderr, "Error decoding PEM of root private key file: %v\n", err)
 		os.Exit(2)
 	}
 
 	key, err := x509.ParseECPrivateKey(keyBlock.Bytes)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing root private key file: %v", err)
+		fmt.Fprintf(os.Stderr, "Error parsing root private key file: %v\n", err)
 		os.Exit(2)
 	}
 
@@ -154,7 +154,7 @@ func loadCA(certFile string, keyFile string) *rootCA {
 func createCA(certFile string, keyFile string) *rootCA {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to generate ecdsa key for root cert: %v", err)
+		fmt.Fprintf(os.Stderr, "Unable to generate ecdsa key for root cert: %v\n", err)
 		os.Exit(2)
 	}
 	publicKey := &privKey.PublicKey
@@ -168,57 +168,57 @@ func createCA(certFile string, keyFile string) *rootCA {
 		MaxPathLen:            0,
 		MaxPathLenZero:        true,
 		BasicConstraintsValid: true,
-		IsCA:        true,
-		KeyUsage:    x509.KeyUsageCertSign | x509.KeyUsageCRLSign | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		IsCA:                  true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &cert, &cert, publicKey, privKey)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to create root certificate: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to create root certificate: %v\n", err)
 		os.Exit(2)
 	}
 
 	finalCert, err := x509.ParseCertificate(derBytes)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to parse created root certificate: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to parse created root certificate: %v\n", err)
 		os.Exit(2)
 	}
 
 	certOut, err := os.Create(certFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to open cert.pem for writing root cert: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to open cert.pem for writing root cert: %v\n", err)
 		os.Exit(2)
 	}
 
 	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error encoding root cert to pem block: %v", err)
+		fmt.Fprintf(os.Stderr, "error encoding root cert to pem block: %v\n", err)
 		os.Exit(2)
 	}
 
 	err = certOut.Close()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error closing root cert file: %v", err)
+		fmt.Fprintf(os.Stderr, "error closing root cert file: %v\n", err)
 		os.Exit(2)
 	}
 
 	keyOut, err := os.OpenFile(keyFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to open key.pem for writing root key: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to open key.pem for writing root key: %v\n", err)
 		os.Exit(2)
 	}
 
 	err = pem.Encode(keyOut, pemBlockForKey(privKey))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error encoding root private key to pem block: %v", err)
+		fmt.Fprintf(os.Stderr, "error encoding root private key to pem block: %v\n", err)
 		os.Exit(2)
 	}
 
 	err = keyOut.Close()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error closing root private key file: %v", err)
+		fmt.Fprintf(os.Stderr, "error closing root private key file: %v\n", err)
 		os.Exit(2)
 	}
 
@@ -232,7 +232,7 @@ func createCA(certFile string, keyFile string) *rootCA {
 func pemBlockForKey(priv *ecdsa.PrivateKey) *pem.Block {
 	b, err := x509.MarshalECPrivateKey(priv)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "unable to marshal ECDSA private key: %v", err)
+		fmt.Fprintf(os.Stderr, "unable to marshal ECDSA private key: %v\n", err)
 		os.Exit(2)
 	}
 	return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}
@@ -253,7 +253,7 @@ func randSerial() *big.Int {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate serial number: %s", err)
+		fmt.Fprintf(os.Stderr, "failed to generate serial number: %s\n", err)
 		os.Exit(2)
 	}
 	return serialNumber
