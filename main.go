@@ -15,12 +15,12 @@ import (
 func main() {
 	usr, err := user.Current()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "cant figure out current user: %v", err)
+		fmt.Fprintf(os.Stderr, "cant figure out current user: %v\n", err)
 		os.Exit(2)
 	}
 
 	if usr.Uid != "0" {
-		fmt.Fprintf(os.Stderr, "run tlself with sudo")
+		fmt.Fprintf(os.Stderr, "tlself needs to be started with sudo\n")
 		os.Exit(2)
 	}
 
@@ -37,7 +37,7 @@ func main() {
 	workdir := path.Join(usr.HomeDir, ".tlself")
 	err = os.MkdirAll(workdir, 0755)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to create hidden work dir ~/.tlself: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to create hidden work dir ~/.tlself: %v\n", err)
 		os.Exit(2)
 	}
 
@@ -45,7 +45,7 @@ func main() {
 	keyFile := path.Join(workdir, "key.pem")
 	root := LoadOrCreateRootCA(certFile, keyFile)
 
-	ensureSystemTrsuted(certFile)
+	ensureSystemTrusted(certFile)
 
 	tlsConfig := &tls.Config{
 		PreferServerCipherSuites: true,
@@ -59,21 +59,21 @@ func main() {
 
 	ln, err := tls.Listen("tcp", listenStr, tlsConfig)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "unable to listen on 127.0.0.1:443: %v", err)
+		fmt.Fprintf(os.Stderr, "unable to listen on %s: %v\n", listenStr, err)
 		os.Exit(2)
 	}
-	fmt.Fprintf(os.Stderr, "TLS proxy running: %s => %s", listenStr, backendStr)
+	fmt.Fprintf(os.Stderr, "TLS proxy running: %s => %s\n", listenStr, backendStr)
 
 	p, err := newProxy(backendStr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "unable to make proxy to %s: %v", backendStr, err)
+		fmt.Fprintf(os.Stderr, "unable to make proxy to %s: %v\n", backendStr, err)
 		os.Exit(2)
 	}
 
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error accepting connection: %v", err)
+			fmt.Fprintf(os.Stderr, "error accepting connection: %v\n", err)
 			continue
 		}
 		go p.proxy(conn)
@@ -103,19 +103,19 @@ func (p proxy) proxy(conn net.Conn) {
 	defer func() {
 		err := conn.Close()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error closing frontend connection: %v", err)
+			fmt.Fprintf(os.Stderr, "error closing frontend connection: %v\n", err)
 		}
 	}()
 
 	bConn, err := net.DialTCP("tcp", nil, p.backend)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error connecting to %s: %v", p.backend, err)
+		fmt.Fprintf(os.Stderr, "error connecting to %s: %v\n", p.backend, err)
 		return
 	}
 	defer func() {
 		err := bConn.Close()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error closing backend connection: %v", err)
+			fmt.Fprintf(os.Stderr, "error closing backend connection: %v\n", err)
 		}
 	}()
 
@@ -126,7 +126,7 @@ func (p proxy) proxy(conn net.Conn) {
 	go func() {
 		_, err := io.Copy(bConn, conn)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error sending data to backend connection: %v", err)
+			fmt.Fprintf(os.Stderr, "error sending data to backend connection: %v\n", err)
 		}
 		wg.Done()
 	}()
@@ -134,7 +134,7 @@ func (p proxy) proxy(conn net.Conn) {
 	go func() {
 		_, err := io.Copy(conn, bConn)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error sending data to frontend connection: %v", err)
+			fmt.Fprintf(os.Stderr, "error sending data to frontend connection: %v\n", err)
 		}
 		wg.Done()
 	}()
@@ -142,7 +142,7 @@ func (p proxy) proxy(conn net.Conn) {
 	wg.Wait()
 }
 
-func ensureSystemTrsuted(certFile string) bool {
+func ensureSystemTrusted(certFile string) bool {
 	if systemTrusted(certFile) {
 		return true
 	}
