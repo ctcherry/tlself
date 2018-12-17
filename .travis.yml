@@ -21,8 +21,7 @@ jobs:
       deploy:
         skip_cleanup: true
         provider: releases
-        api_key:
-          secure: INSERT_API_KEY_HERE
+        api_key: $GH_RELEASE_TOKEN
         file:
           - tlself_macos.zip
           - tlself_linux.zip
