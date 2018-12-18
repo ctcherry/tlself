@@ -24,7 +24,5 @@ jobs:
         api_key: $GH_RELEASE_TOKEN
         file:
           - tlself_macos.zip
-          - tlself_linux.zip
-          - tlself_windows.zip
         on:
           tags: true
