@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -30,8 +31,20 @@ func main() {
 		backendStr = "127.0.0.1:80"
 	}
 
-	if isRoot(usr) && strings.Contains(listenStr, ":443") {
-		fmt.Fprintf(os.Stderr, "tlself needs to be started with sudo if listening on :443\n")
+	portIdx := strings.Index(listenStr, ":")
+	if portIdx < 0 {
+		fmt.Fprintf(os.Stderr, "env var LISTEN does not contain required port number\n")
+		os.Exit(2)
+	}
+
+	port, portErr := strconv.ParseUint(listenStr[portIdx+1:], 10, 16)
+	if portErr != nil {
+		fmt.Fprintf(os.Stderr, "problem parsing port from LISTEN env var: %s\n", portErr)
+		os.Exit(2)
+	}
+
+	if port < 1024 && !isRoot(usr) {
+		fmt.Fprintf(os.Stderr, "tlself needs to be started with sudo if listening on port %d, a privileged port\n", port)
 		os.Exit(2)
 	}
 
